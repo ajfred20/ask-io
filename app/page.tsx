@@ -80,16 +80,16 @@ export default function Home() {
           </div>
 
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tighter leading-tight mb-8">
-            Your AI Research Assistant{" "}
-            <span className="bg-gradient-to-r from-blue-600 to-blue-800 tracking-tighter bg-clip-text text-transparent">
-              That Never Sleeps
+            Your AI Assistant for{" "}
+            <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+              Instant Answers
             </span>
           </h1>
 
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-12">
-            Unlock the power of AI-driven research. Our intelligent agent
-            analyzes vast amounts of data, synthesizes information, and delivers
-            comprehensive insights tailored to your research needs.
+          <p className="text-xl text-gray-600 mb-8">
+            Ask any question and let our AI scan the web to find the most
+            accurate answers. No more endless searching - get instant, reliable
+            information.
           </p>
 
           {/* AI Capabilities Section */}
@@ -371,14 +371,14 @@ export default function Home() {
               {/* Header */}
               <div className="text-center mb-20">
                 <span className="text-blue-600 font-medium mb-4 block">
-                  Start Using AI Research Assistant
+                  Start Getting Answers
                 </span>
                 <h2 className="text-4xl font-bold mb-4">
-                  Begin Your Research Journey
+                  Start Getting Answers
                 </h2>
                 <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-                  Get started with our AI-powered research assistant in three
-                  simple steps
+                  Get started with our AI-powered answer engine in three simple
+                  steps
                 </p>
               </div>
 
@@ -889,68 +889,68 @@ const quickStartSteps = [
   {
     title: "Ask Your Question",
     description:
-      "Input your research query or upload documents. Our AI understands complex academic questions and research context.",
+      "Type any question in natural language. Our AI understands exactly what you're looking for and begins searching.",
   },
   {
-    title: "Get AI Analysis",
+    title: "AI Scans the Web",
     description:
-      "Our advanced AI processes your request, analyzing multiple sources and synthesizing information in real-time.",
+      "Our advanced AI instantly scans millions of sources across the internet to find the most relevant information.",
   },
   {
-    title: "Review Insights",
+    title: "Get Your Answer",
     description:
-      "Receive comprehensive research insights with citations, summaries, and relevant connections between sources.",
+      "Receive a comprehensive, accurate answer compiled from the best sources, complete with citations and references.",
   },
 ];
 
 const researchFeatures = [
-  "Natural language query processing",
-  "Real-time source analysis and synthesis",
-  "Automatic citation generation",
-  "Cross-reference verification",
-  "Smart source recommendations",
+  "Natural language question processing",
+  "Real-time web scanning",
+  "Automatic source verification",
+  "Cross-reference checking",
+  "Smart answer synthesis",
 ];
 
 const aiSupport = [
   {
     icon: Sparkles,
-    text: "Instant AI Response",
+    text: "Instant Answers",
   },
   {
     icon: Brain,
-    text: "Smart Query Understanding",
+    text: "Smart Understanding",
   },
   {
     icon: Search,
-    text: "Comprehensive Search",
+    text: "Web-wide Search",
   },
   {
     icon: FileCheck,
-    text: "Source Verification",
+    text: "Verified Sources",
   },
 ];
 
 const advancedFeatures = [
   {
     icon: Search,
-    title: "Semantic Search",
+    title: "Smart Search",
     description:
-      "Advanced search algorithms that understand context and meaning",
+      "Our AI scans the entire web to find the most relevant answers to your questions",
   },
   {
     icon: Bot,
-    title: "AI Suggestions",
+    title: "AI Understanding",
     description:
-      "Get intelligent recommendations based on your research patterns",
+      "Advanced natural language processing to understand any question",
   },
   {
     icon: ChartBar,
-    title: "Analytics",
-    description: "Detailed insights into your research progress and trends",
+    title: "Answer Quality",
+    description: "Get high-quality answers with verified sources and citations",
   },
   {
     icon: Share2,
-    title: "Collaboration",
-    description: "Work seamlessly with team members in real-time",
+    title: "Easy Sharing",
+    description: "Share answers and sources with others instantly",
   },
 ];
