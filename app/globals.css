@@ -1,4 +1,4 @@
-@import url("https://fonts.cdnfonts.com/css/satoshi");
+@import url("https://fonts.cdnfonts.com/css/bricolage-grotesque");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -18,5 +18,5 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: "Satoshi", sans-serif;
+  font-family: "Bricolage Grotesque", sans-serif;
 }

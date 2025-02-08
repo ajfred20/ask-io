@@ -13,6 +13,7 @@ const config: Config = {
         "float-delayed": "float 6s ease-in-out 2s infinite",
         "float-slow": "float 8s ease-in-out 1s infinite",
         ping: "ping 2s cubic-bezier(0, 0, 0.2, 1) infinite",
+        pulse: "pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
       },
       keyframes: {
         float: {
@@ -23,6 +24,14 @@ const config: Config = {
           "75%, 100%": {
             transform: "scale(2)",
             opacity: "0",
+          },
+        },
+        pulse: {
+          "0%, 100%": {
+            opacity: "1",
+          },
+          "50%": {
+            opacity: ".5",
           },
         },
       },
