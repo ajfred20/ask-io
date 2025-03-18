@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef, Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
+import { generateResponse } from "@/app/lib/gemini";
 
 const suggestionQuestions = [
   "What are the latest developments in AI?",
@@ -100,20 +101,30 @@ export default function AiChat() {
     setMessage("");
     setIsLoading(true);
 
-    // Simulate bot response
-    setTimeout(() => {
+    try {
+      // Get response from Gemini API
+      const response = await generateResponse(message);
+      
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content:
-          "This is a simulated response to your question. In a real implementation, this would be replaced with an actual API response.",
+        content: response,
         sender: "bot",
       };
       setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      console.error("Error getting AI response:", error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "I'm sorry, I encountered an error while processing your request.",
+        sender: "bot",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 3000);
+    }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -135,16 +146,30 @@ export default function AiChat() {
     setShowAttachMenu(false);
     setIsLoading(true);
 
-    // Simulate AI analysis
-    setTimeout(() => {
+    try {
+      // Read file content
+      const fileContent = await readFileAsText(file);
+      
+      // Use Gemini to analyze the file
+      const analysis = await analyzeFile(fileContent, file.name, fileType);
+      
       const analysisMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: simulateAnalysis(fileType, file.name),
+        content: analysis,
         sender: "bot",
       };
       setMessages((prev) => [...prev, analysisMessage]);
+    } catch (error) {
+      console.error("Error analyzing file:", error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "I'm sorry, I encountered an error while analyzing your file.",
+        sender: "bot",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 3000);
+    }
   };
 
   const handleLinkAttach = () => {
@@ -154,7 +179,7 @@ export default function AiChat() {
     setTimeout(() => linkInputRef.current?.focus(), 100);
   };
 
-  const handleLinkSubmit = () => {
+  const handleLinkSubmit = async () => {
     if (!linkInput.trim()) return;
 
     // Add user message with link
@@ -173,16 +198,48 @@ export default function AiChat() {
     setLinkInput("");
     setIsLoading(true);
 
-    // Simulate AI analysis
-    setTimeout(() => {
+    try {
+      // Use Gemini to analyze the link
+      const analysis = await generateResponse(`Analyze this link: ${linkInput}`);
+      
       const analysisMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: simulateAnalysis("link", linkInput),
+        content: analysis,
         sender: "bot",
       };
       setMessages((prev) => [...prev, analysisMessage]);
+    } catch (error) {
+      console.error("Error analyzing link:", error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "I'm sorry, I encountered an error while analyzing the link.",
+        sender: "bot",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 3000);
+    }
+  };
+
+  // Helper function to read file content
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          resolve(event.target.result as string);
+        } else {
+          reject(new Error("Failed to read file"));
+        }
+      };
+      reader.onerror = () => reject(reader.error);
+      
+      if (file.type.startsWith("image/")) {
+        reader.readAsDataURL(file);
+      } else {
+        reader.readAsText(file);
+      }
+    });
   };
 
   return (
