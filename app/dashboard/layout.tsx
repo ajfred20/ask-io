@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Home, User, Bot, Settings, LogOut } from "lucide-react";
+import { Home, User, Bot, Settings, LogOut, Menu } from "lucide-react";
 
 export default function DashboardLayout({
   children,

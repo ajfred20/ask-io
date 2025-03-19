@@ -2,10 +2,9 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  password: string; // In a real app, this would be hashed
-  createdAt: Date;
-  updatedAt: Date;
-  profilePicture?: string;
+  created_at: string;
+  updated_at: string;
+  profile_picture?: string;
   bio?: string;
 }
 
@@ -14,8 +13,8 @@ export interface SafeUser {
   id: string;
   email: string;
   name: string;
-  createdAt: Date;
-  updatedAt: Date;
-  profilePicture?: string;
+  created_at: string;
+  updated_at: string;
+  profile_picture?: string;
   bio?: string;
 } 

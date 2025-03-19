@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef, Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-import { generateResponse } from "@/app/lib/gemini";
+import { generateResponse, analyzeFile } from "@/app/lib/gemini";
+import { useAuth } from "@/app/context/AuthContext";
+import { saveChatMessage, getChatHistory, ChatMessage } from "@/app/lib/chat";
 
 const suggestionQuestions = [
   "What are the latest developments in AI?",
@@ -36,44 +38,49 @@ function LoadingDots() {
   );
 }
 
-type Message = {
-  id: string;
-  content: string;
-  sender: "user" | "bot";
-  attachment?: {
-    type: "image" | "pdf" | "link";
-    url: string;
-    name: string;
-  };
-};
-
-const simulateAnalysis = (type: "image" | "pdf" | "link", name: string) => {
-  const analyses = {
-    image: `I've analyzed the image "${name}". It appears to show [simulated image analysis]. The main elements I can identify are [key elements]. Would you like me to explain any specific aspect of the image?`,
-    pdf: `I've reviewed the PDF document "${name}". The document appears to be about [simulated content analysis]. The main topics covered are [key topics]. What specific information would you like to know about this document?`,
-    link: `I've analyzed the content from the link. The page discusses [simulated link analysis]. Key points include [main points]. Would you like me to summarize any particular aspect?`,
-  };
-
-  return analyses[type];
-};
-
 export default function AiChat() {
+  const { user } = useAuth();
   const [message, setMessage] = useState("");
   const [suggestions, setSuggestions] = useState(suggestionQuestions);
   const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content:
-        "Hello! I'm your AI research assistant. How can I help you today?",
-      sender: "bot",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [linkInput, setLinkInput] = useState("");
   const linkInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load chat history
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      if (user) {
+        const history = await getChatHistory(user.id);
+        if (history.length > 0) {
+          setMessages(history);
+        } else {
+          // Set welcome message if no history
+          setMessages([{
+            id: "welcome",
+            content: "Hello! I'm your AI research assistant. How can I help you today?",
+            sender: "bot",
+            created_at: new Date().toISOString()
+          }]);
+        }
+        setHistoryLoaded(true);
+      }
+    };
+
+    if (user && !historyLoaded) {
+      loadChatHistory();
+    }
+  }, [user, historyLoaded]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleSuggestionClick = (question: string) => {
     setMessage(question);
@@ -89,53 +96,76 @@ export default function AiChat() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim()) return;
+    if (!message.trim() || !user) return;
 
     // Add user message
-    const userMessage: Message = {
+    const userMessage: ChatMessage = {
       id: Date.now().toString(),
       content: message,
       sender: "user",
+      created_at: new Date().toISOString()
     };
     setMessages((prev) => [...prev, userMessage]);
+    
+    // Save user message to database
+    await saveChatMessage(user.id, message, true);
+    
     setMessage("");
     setIsLoading(true);
 
     try {
       // Get response from Gemini API
-      const response = await generateResponse(message);
+      const response = await generateResponse(message, user.id);
       
-      const botMessage: Message = {
+      const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         content: response,
         sender: "bot",
+        created_at: new Date().toISOString()
       };
       setMessages((prev) => [...prev, botMessage]);
+      
+      // Save bot message to database
+      await saveChatMessage(user.id, response, false);
     } catch (error) {
       console.error("Error getting AI response:", error);
-      const errorMessage: Message = {
+      const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         content: "I'm sorry, I encountered an error while processing your request.",
         sender: "bot",
+        created_at: new Date().toISOString()
       };
       setMessages((prev) => [...prev, errorMessage]);
+      
+      // Save error message to database
+      await saveChatMessage(user.id, errorMessage.content, false);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleAttachClick = () => {
+    setShowAttachMenu(!showAttachMenu);
+  };
+
+  const handleFileClick = () => {
+    fileInputRef.current?.click();
+    setShowAttachMenu(false);
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
 
     const fakeUrl = URL.createObjectURL(file);
     const fileType = file.type.startsWith("image/") ? "image" : "pdf";
 
     // Add user message with attachment
-    const userMessage: Message = {
+    const userMessage: ChatMessage = {
       id: Date.now().toString(),
       content: `Uploaded ${file.name}`,
       sender: "user",
+      created_at: new Date().toISOString(),
       attachment: {
         type: fileType,
         url: fakeUrl,
@@ -143,6 +173,14 @@ export default function AiChat() {
       },
     };
     setMessages((prev) => [...prev, userMessage]);
+    
+    // Save user message to database
+    await saveChatMessage(user.id, `Uploaded ${file.name}`, true, {
+      type: fileType,
+      url: fakeUrl,
+      name: file.name,
+    });
+    
     setShowAttachMenu(false);
     setIsLoading(true);
 
@@ -151,22 +189,30 @@ export default function AiChat() {
       const fileContent = await readFileAsText(file);
       
       // Use Gemini to analyze the file
-      const analysis = await analyzeFile(fileContent, file.name, fileType);
+      const analysis = await analyzeFile(fileContent, file.name, fileType, user.id);
       
-      const analysisMessage: Message = {
+      const analysisMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         content: analysis,
         sender: "bot",
+        created_at: new Date().toISOString()
       };
       setMessages((prev) => [...prev, analysisMessage]);
+      
+      // Save bot message to database
+      await saveChatMessage(user.id, analysis, false);
     } catch (error) {
       console.error("Error analyzing file:", error);
-      const errorMessage: Message = {
+      const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         content: "I'm sorry, I encountered an error while analyzing your file.",
         sender: "bot",
+        created_at: new Date().toISOString()
       };
       setMessages((prev) => [...prev, errorMessage]);
+      
+      // Save error message to database
+      await saveChatMessage(user.id, errorMessage.content, false);
     } finally {
       setIsLoading(false);
     }
@@ -180,13 +226,14 @@ export default function AiChat() {
   };
 
   const handleLinkSubmit = async () => {
-    if (!linkInput.trim()) return;
+    if (!linkInput.trim() || !user) return;
 
     // Add user message with link
-    const userMessage: Message = {
+    const userMessage: ChatMessage = {
       id: Date.now().toString(),
       content: `Shared link: ${linkInput}`,
       sender: "user",
+      created_at: new Date().toISOString(),
       attachment: {
         type: "link",
         url: linkInput,
@@ -194,28 +241,44 @@ export default function AiChat() {
       },
     };
     setMessages((prev) => [...prev, userMessage]);
+    
+    // Save user message to database
+    await saveChatMessage(user.id, `Shared link: ${linkInput}`, true, {
+      type: "link",
+      url: linkInput,
+      name: linkInput,
+    });
+    
     setIsLinkDialogOpen(false);
     setLinkInput("");
     setIsLoading(true);
 
     try {
       // Use Gemini to analyze the link
-      const analysis = await generateResponse(`Analyze this link: ${linkInput}`);
+      const analysis = await generateResponse(`Analyze this link: ${linkInput}`, user.id);
       
-      const analysisMessage: Message = {
+      const analysisMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         content: analysis,
         sender: "bot",
+        created_at: new Date().toISOString()
       };
       setMessages((prev) => [...prev, analysisMessage]);
+      
+      // Save bot message to database
+      await saveChatMessage(user.id, analysis, false);
     } catch (error) {
       console.error("Error analyzing link:", error);
-      const errorMessage: Message = {
+      const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         content: "I'm sorry, I encountered an error while analyzing the link.",
         sender: "bot",
+        created_at: new Date().toISOString()
       };
       setMessages((prev) => [...prev, errorMessage]);
+      
+      // Save error message to database
+      await saveChatMessage(user.id, errorMessage.content, false);
     } finally {
       setIsLoading(false);
     }

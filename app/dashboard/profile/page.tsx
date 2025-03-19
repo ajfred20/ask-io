@@ -72,9 +72,9 @@ export default function Profile() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6 flex items-center space-x-6">
           <div className="bg-blue-100 rounded-full p-4">
-            {user.profilePicture ? (
+            {user.profile_picture ? (
               <img 
-                src={user.profilePicture} 
+                src={user.profile_picture} 
                 alt={user.name} 
                 className="h-16 w-16 rounded-full"
               />
@@ -87,7 +87,7 @@ export default function Profile() {
             <h2 className="text-xl font-semibold">{user.name}</h2>
             <p className="text-gray-500">{user.email}</p>
             <p className="text-sm text-gray-400 mt-1">
-              Member since {new Date(user.createdAt).toLocaleDateString()}
+              Member since {new Date(user.created_at).toLocaleDateString()}
             </p>
           </div>
         </div>

@@ -1,81 +1,155 @@
+import { supabase } from './supabase';
 import { User, SafeUser } from './models/user';
 
-// In a real app, this would be a database
-const users: User[] = [];
-
-// Generate a unique ID
-const generateId = (): string => {
-  return Math.random().toString(36).substring(2, 15);
-};
-
 // Register a new user
-export const registerUser = (email: string, password: string, name: string): SafeUser | null => {
-  // Check if user already exists
-  if (users.find(user => user.email === email)) {
+export const registerUser = async (
+  email: string, 
+  password: string, 
+  name: string
+): Promise<SafeUser | null> => {
+  try {
+    // Register with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (authError || !authData.user) {
+      console.error('Error registering user:', authError);
+      return null;
+    }
+
+    // Create user profile in the database
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .insert([
+        { 
+          id: authData.user.id, 
+          email, 
+          name,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ])
+      .select()
+      .single();
+
+    if (userError || !userData) {
+      console.error('Error creating user profile:', userError);
+      return null;
+    }
+
+    return userData as SafeUser;
+  } catch (error) {
+    console.error('Unexpected error during registration:', error);
     return null;
   }
-
-  const newUser: User = {
-    id: generateId(),
-    email,
-    password, // In a real app, this would be hashed
-    name,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  users.push(newUser);
-  
-  // Return safe user (without password)
-  const { password: _, ...safeUser } = newUser;
-  return safeUser as SafeUser;
 };
 
 // Login user
-export const loginUser = (email: string, password: string): SafeUser | null => {
-  const user = users.find(user => user.email === email && user.password === password);
-  
-  if (!user) {
+export const loginUser = async (
+  email: string, 
+  password: string
+): Promise<SafeUser | null> => {
+  try {
+    // Sign in with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError || !authData.user) {
+      console.error('Error logging in:', authError);
+      return null;
+    }
+
+    // Get user profile from database
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single();
+
+    if (userError || !userData) {
+      console.error('Error fetching user profile:', userError);
+      return null;
+    }
+
+    return userData as SafeUser;
+  } catch (error) {
+    console.error('Unexpected error during login:', error);
     return null;
   }
-  
-  // Return safe user (without password)
-  const { password: _, ...safeUser } = user;
-  return safeUser as SafeUser;
 };
 
-// Get user by ID
-export const getUserById = (id: string): SafeUser | null => {
-  const user = users.find(user => user.id === id);
-  
-  if (!user) {
+// Get current user
+export const getCurrentUser = async (): Promise<SafeUser | null> => {
+  try {
+    // Get current session
+    const { data: sessionData } = await supabase.auth.getSession();
+    
+    if (!sessionData.session?.user) {
+      return null;
+    }
+
+    // Get user profile from database
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', sessionData.session.user.id)
+      .single();
+
+    if (userError || !userData) {
+      console.error('Error fetching user profile:', userError);
+      return null;
+    }
+
+    return userData as SafeUser;
+  } catch (error) {
+    console.error('Unexpected error getting current user:', error);
     return null;
   }
-  
-  // Return safe user (without password)
-  const { password: _, ...safeUser } = user;
-  return safeUser as SafeUser;
 };
 
 // Update user profile
-export const updateUserProfile = (
+export const updateUserProfile = async (
   id: string, 
-  updates: { name?: string; bio?: string; profilePicture?: string }
-): SafeUser | null => {
-  const userIndex = users.findIndex(user => user.id === id);
-  
-  if (userIndex === -1) {
+  updates: { name?: string; bio?: string; profile_picture?: string }
+): Promise<SafeUser | null> => {
+  try {
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (userError || !userData) {
+      console.error('Error updating user profile:', userError);
+      return null;
+    }
+
+    return userData as SafeUser;
+  } catch (error) {
+    console.error('Unexpected error updating profile:', error);
     return null;
   }
-  
-  // Update user
-  users[userIndex] = {
-    ...users[userIndex],
-    ...updates,
-    updatedAt: new Date()
-  };
-  
-  // Return safe user (without password)
-  const { password: _, ...safeUser } = users[userIndex];
-  return safeUser as SafeUser;
+};
+
+// Sign out
+export const signOut = async (): Promise<boolean> => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error signing out:', error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Unexpected error signing out:', error);
+    return false;
+  }
 }; 
