@@ -87,7 +87,7 @@ export default function Home() {
           </h1>
 
           <p className="text-lg sm:text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Ask any question and let our AI scan the web to find the most
+            Ask any question and let our AI find the most
             accurate answers. No more endless searching - get instant, reliable
             information.
           </p>
