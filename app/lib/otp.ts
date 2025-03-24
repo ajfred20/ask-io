@@ -1,6 +1,6 @@
 import { authenticator } from 'otplib';
 import { supabase } from './supabase';
-import { sendEmail } from './email';
+import { sendEmail, EMAIL_TEMPLATES } from './email';
 
 // Configure OTP settings
 authenticator.options = {
@@ -19,39 +19,22 @@ export interface OTPRecord {
 
 export async function generateOTP(email: string): Promise<string | null> {
   try {
-    // Generate a 6-digit OTP
-    const otp = authenticator.generateToken(email + process.env.OTP_SECRET);
-    
-    // Store OTP in database
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
-    
-    const { error } = await supabase
-      .from('email_otps')
-      .insert({
-        email,
-        otp,
-        created_at: new Date().toISOString(),
-        expires_at: expiresAt.toISOString(),
-        verified: false
-      });
-
-    if (error) {
-      console.error('Error storing OTP:', error);
-      return null;
-    }
-
-    // Send OTP email
-    const emailSent = await sendEmail({
-      to: email,
-      ...EMAIL_TEMPLATES.VERIFY_EMAIL(otp)
+    const response = await fetch('/api/auth/generate-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
     });
-
-    if (!emailSent) {
-      console.error('Error sending OTP email');
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error('Error generating OTP:', data.error);
       return null;
     }
-
-    return otp;
+    
+    return 'sent'; // We don't return the actual OTP for security
   } catch (error) {
     console.error('Error generating OTP:', error);
     return null;
@@ -60,34 +43,21 @@ export async function generateOTP(email: string): Promise<string | null> {
 
 export async function verifyOTP(email: string, otp: string): Promise<boolean> {
   try {
-    // Get stored OTP
-    const { data, error } = await supabase
-      .from('email_otps')
-      .select('*')
-      .eq('email', email)
-      .eq('otp', otp)
-      .eq('verified', false)
-      .gte('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (error || !data) {
-      console.error('Error verifying OTP:', error);
+    const response = await fetch('/api/auth/verify-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, otp }),
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error('Error verifying OTP:', data.error);
       return false;
     }
-
-    // Mark OTP as verified
-    const { error: updateError } = await supabase
-      .from('email_otps')
-      .update({ verified: true })
-      .eq('id', data.id);
-
-    if (updateError) {
-      console.error('Error updating OTP status:', updateError);
-      return false;
-    }
-
+    
     return true;
   } catch (error) {
     console.error('Error verifying OTP:', error);

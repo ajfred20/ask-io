@@ -1,5 +1,14 @@
 import { supabase } from './supabase';
-import { User, SafeUser } from './models/user';
+
+export interface SafeUser {
+  id: string;
+  email: string;
+  name: string;
+  bio?: string;
+  profilePicture?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // Register a new user
 export const registerUser = async (
@@ -12,6 +21,11 @@ export const registerUser = async (
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          name: name, // Store name in user metadata
+        },
+      },
     });
 
     if (authError || !authData.user) {
@@ -19,29 +33,37 @@ export const registerUser = async (
       return null;
     }
 
-    // Create user profile in the database
-    const { data: userData, error: userError } = await supabase
-      .from('profiles')
-      .insert([
-        { 
-          id: authData.user.id, 
-          email, 
-          name,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ])
-      .select()
-      .single();
+    // Create user profile in MongoDB
+    const response = await fetch('/api/user/profile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: authData.user.id,
+        email,
+        name,
+      }),
+    });
 
-    if (userError || !userData) {
-      console.error('Error creating user profile:', userError);
+    if (!response.ok) {
+      console.error('Error creating user profile in MongoDB');
       return null;
     }
 
-    return userData as SafeUser;
+    const { profile } = await response.json();
+    
+    return {
+      id: profile.supabaseId,
+      email: profile.email,
+      name: profile.name,
+      bio: profile.bio,
+      profilePicture: profile.profilePicture,
+      createdAt: profile.createdAt,
+      updatedAt: profile.updatedAt
+    };
   } catch (error) {
-    console.error('Unexpected error during registration:', error);
+    console.error('Unexpected error registering user:', error);
     return null;
   }
 };
@@ -58,24 +80,77 @@ export const loginUser = async (
       password,
     });
 
-    if (authError || !authData.user) {
+    if (authError) {
+      if (authError.message.includes('Email not confirmed')) {
+        console.error('Email not confirmed. Please check your email for a confirmation link.');
+        // For development, let's try to sign up again to trigger email confirmation
+        await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/login`
+          }
+        });
+      }
       console.error('Error logging in:', authError);
       return null;
     }
 
-    // Get user profile from database
-    const { data: userData, error: userError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', authData.user.id)
-      .single();
-
-    if (userError || !userData) {
-      console.error('Error fetching user profile:', userError);
+    if (!authData.user) {
       return null;
     }
 
-    return userData as SafeUser;
+    // Get user profile from MongoDB
+    const response = await fetch(`/api/user/profile?userId=${authData.user.id}`);
+    
+    if (!response.ok) {
+      // If profile doesn't exist, create it
+      if (response.status === 404) {
+        const createResponse = await fetch('/api/user/profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: authData.user.id,
+            email: authData.user.email,
+            name: authData.user.user_metadata?.name || 'User',
+          }),
+        });
+        
+        if (!createResponse.ok) {
+          console.error('Error creating user profile in MongoDB');
+          return null;
+        }
+        
+        const { profile } = await createResponse.json();
+        
+        return {
+          id: profile.supabaseId,
+          email: profile.email,
+          name: profile.name,
+          bio: profile.bio,
+          profilePicture: profile.profilePicture,
+          createdAt: profile.createdAt,
+          updatedAt: profile.updatedAt
+        };
+      }
+      
+      console.error('Error fetching user profile from MongoDB');
+      return null;
+    }
+
+    const { profile } = await response.json();
+    
+    return {
+      id: profile.supabaseId,
+      email: profile.email,
+      name: profile.name,
+      bio: profile.bio,
+      profilePicture: profile.profilePicture,
+      createdAt: profile.createdAt,
+      updatedAt: profile.updatedAt
+    };
   } catch (error) {
     console.error('Unexpected error during login:', error);
     return null;
@@ -92,19 +167,57 @@ export const getCurrentUser = async (): Promise<SafeUser | null> => {
       return null;
     }
 
-    // Get user profile from database
-    const { data: userData, error: userError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', sessionData.session.user.id)
-      .single();
-
-    if (userError || !userData) {
-      console.error('Error fetching user profile:', userError);
+    // Get user profile from MongoDB
+    const response = await fetch(`/api/user/profile?userId=${sessionData.session.user.id}`);
+    
+    if (!response.ok) {
+      // If profile doesn't exist, create it
+      if (response.status === 404) {
+        const createResponse = await fetch('/api/user/profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: sessionData.session.user.id,
+            email: sessionData.session.user.email,
+            name: sessionData.session.user.user_metadata?.name || 'User',
+          }),
+        });
+        
+        if (!createResponse.ok) {
+          console.error('Error creating user profile in MongoDB');
+          return null;
+        }
+        
+        const { profile } = await createResponse.json();
+        
+        return {
+          id: profile.supabaseId,
+          email: profile.email,
+          name: profile.name,
+          bio: profile.bio,
+          profilePicture: profile.profilePicture,
+          createdAt: profile.createdAt,
+          updatedAt: profile.updatedAt
+        };
+      }
+      
+      console.error('Error fetching user profile from MongoDB');
       return null;
     }
 
-    return userData as SafeUser;
+    const { profile } = await response.json();
+    
+    return {
+      id: profile.supabaseId,
+      email: profile.email,
+      name: profile.name,
+      bio: profile.bio,
+      profilePicture: profile.profilePicture,
+      createdAt: profile.createdAt,
+      updatedAt: profile.updatedAt
+    };
   } catch (error) {
     console.error('Unexpected error getting current user:', error);
     return null;
@@ -114,25 +227,36 @@ export const getCurrentUser = async (): Promise<SafeUser | null> => {
 // Update user profile
 export const updateUserProfile = async (
   id: string, 
-  updates: { name?: string; bio?: string; profile_picture?: string }
+  updates: { name?: string; bio?: string; profilePicture?: string }
 ): Promise<SafeUser | null> => {
   try {
-    const { data: userData, error: userError } = await supabase
-      .from('profiles')
-      .update({
+    const response = await fetch('/api/user/profile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: id,
         ...updates,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
+      }),
+    });
 
-    if (userError || !userData) {
-      console.error('Error updating user profile:', userError);
+    if (!response.ok) {
+      console.error('Error updating user profile in MongoDB');
       return null;
     }
 
-    return userData as SafeUser;
+    const { profile } = await response.json();
+    
+    return {
+      id: profile.supabaseId,
+      email: profile.email,
+      name: profile.name,
+      bio: profile.bio,
+      profilePicture: profile.profilePicture,
+      createdAt: profile.createdAt,
+      updatedAt: profile.updatedAt
+    };
   } catch (error) {
     console.error('Unexpected error updating profile:', error);
     return null;

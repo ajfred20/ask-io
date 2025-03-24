@@ -28,8 +28,8 @@ export default function SignUp() {
     
     try {
       // Generate and send OTP
-      const otp = await generateOTP(email);
-      if (otp) {
+      const result = await generateOTP(email);
+      if (result) {
         setStep('verify');
       } else {
         setError('Failed to send verification code. Please try again.');

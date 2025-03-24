@@ -1,27 +1,42 @@
-import sgMail from '@sendgrid/mail';
+import nodemailer from 'nodemailer';
 
-// Initialize SendGrid with API key
-sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
+// Create a transporter
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST,
+  port: parseInt(process.env.EMAIL_PORT || '587'),
+  secure: process.env.EMAIL_SECURE === 'true',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+});
 
 export interface EmailOptions {
   to: string;
-  subject: string;
-  text: string;
-  html: string;
-  from?: string;
+  subject?: string;
+  text?: string;
+  html?: string;
+  templateName?: string;
+  templateData?: any[];
 }
 
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   try {
-    const msg = {
-      to: options.to,
-      from: options.from || process.env.EMAIL_FROM || 'noreply@ask.io',
-      subject: options.subject,
-      text: options.text,
-      html: options.html,
-    };
+    const response = await fetch('/api/email/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(options),
+    });
     
-    await sgMail.send(msg);
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error('Error sending email:', data.error);
+      return false;
+    }
+    
     return true;
   } catch (error) {
     console.error('Error sending email:', error);
@@ -35,7 +50,7 @@ export const EMAIL_TEMPLATES = {
     subject: 'Welcome to Ask.io!',
     text: `Hi ${name}, Welcome to Ask.io! We're excited to have you on board.`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="font-family: 'Bricolage Grotesque', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #3b82f6;">Welcome to Ask.io!</h1>
         <p>Hi ${name},</p>
         <p>We're excited to have you on board. Ask.io is your AI-powered research assistant that helps you find answers to your questions instantly.</p>
@@ -57,7 +72,7 @@ export const EMAIL_TEMPLATES = {
     subject: 'Reset Your Ask.io Password',
     text: `You requested a password reset. Click this link to reset your password: ${resetLink}`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="font-family: 'Bricolage Grotesque', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #3b82f6;">Reset Your Password</h1>
         <p>You requested a password reset for your Ask.io account.</p>
         <p>Click the button below to reset your password. This link will expire in 1 hour.</p>
@@ -72,7 +87,7 @@ export const EMAIL_TEMPLATES = {
     subject: 'Your Ask.io Account Has Been Deleted',
     text: `Hi ${name}, Your Ask.io account has been successfully deleted. We're sorry to see you go.`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="font-family: 'Bricolage Grotesque', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #3b82f6;">Account Deleted</h1>
         <p>Hi ${name},</p>
         <p>Your Ask.io account has been successfully deleted.</p>
@@ -87,7 +102,7 @@ export const EMAIL_TEMPLATES = {
     subject: 'Your Ask.io Credits Are Running Low',
     text: `Hi ${name}, Your Ask.io credits are running low. You have ${remainingCredits} credits remaining.`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="font-family: 'Bricolage Grotesque', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #3b82f6;">Low Credits Alert</h1>
         <p>Hi ${name},</p>
         <p>Your Ask.io credits are running low. You currently have <strong>${remainingCredits} credits</strong> remaining.</p>

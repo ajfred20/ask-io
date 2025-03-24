@@ -67,13 +67,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signup = async (email: string, password: string, name: string): Promise<boolean> => {
-    setLoading(true);
     try {
-      const newUser = await registerUser(email, password, name);
-      if (newUser) {
-        setUser(newUser);
+      setLoading(true);
+      
+      // Add a delay to avoid rate limiting
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      
+      const success = await registerUser(email, password, name);
+      
+      if (success) {
+        // Fetch the user after registration
+        await delay(1000); // Wait 1 second
+        const currentUser = await getCurrentUser();
+        setUser(currentUser);
         return true;
       }
+      
+      // If the regular registration failed, try using the service role API
+      try {
+        await delay(1000); // Wait 1 second to avoid rate limiting
+        
+        const { data: authData } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        
+        if (authData.user) {
+          await delay(1000); // Wait 1 second
+          
+          // Create profile using service role API
+          const response = await fetch('/api/auth/create-profile', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: authData.user.id,
+              email,
+              name
+            }),
+          });
+          
+          if (response.ok) {
+            await delay(1000); // Wait 1 second
+            // Fetch the user after profile creation
+            const currentUser = await getCurrentUser();
+            setUser(currentUser);
+            return true;
+          }
+        }
+      } catch (serviceError) {
+        console.error('Error using service role for profile creation:', serviceError);
+      }
+      
       return false;
     } catch (error) {
       console.error('Signup error:', error);
