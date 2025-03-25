@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     
     // Store OTP in database
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
     
     const { error } = await supabase
       .from('email_otps')

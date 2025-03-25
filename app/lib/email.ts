@@ -222,4 +222,162 @@ export const EMAIL_TEMPLATES = {
       </html>
     `
   }),
+  
+  VERIFICATION_SUCCESS: (name: string) => ({
+    subject: 'Email Verified Successfully! ✅',
+    text: `Hi ${name}, Your email has been verified successfully. Your account now has a verified badge!`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&display=swap" rel="stylesheet">
+          <style>
+            body {
+              font-family: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              line-height: 1.6;
+              color: #1f2937;
+              margin: 0;
+              padding: 0;
+              background-color: #f9fafb;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 40px 20px;
+              background-color: #ffffff;
+              border-radius: 16px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 40px;
+            }
+            .logo {
+              width: 80px;
+              height: 80px;
+              background: linear-gradient(135deg, #3b82f6, #60a5fa);
+              border-radius: 20px;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              margin-bottom: 20px;
+              box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+            }
+            .logo span {
+              color: white;
+              font-size: 36px;
+              font-weight: 700;
+            }
+            h1 {
+              color: #1f2937;
+              font-size: 28px;
+              font-weight: 700;
+              margin: 0 0 20px;
+            }
+            .success-container {
+              background-color: #ecfdf5;
+              border-radius: 12px;
+              padding: 30px;
+              text-align: center;
+              margin: 30px 0;
+              border: 1px solid #d1fae5;
+            }
+            .success-icon {
+              font-size: 64px;
+              margin-bottom: 20px;
+            }
+            .cta-button {
+              display: inline-block;
+              background-color: #3b82f6;
+              color: white;
+              font-weight: 600;
+              padding: 12px 24px;
+              border-radius: 8px;
+              text-decoration: none;
+              margin-top: 20px;
+              box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+            }
+            .features {
+              margin: 30px 0;
+              padding: 0;
+              list-style: none;
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+              gap: 20px;
+            }
+            .feature {
+              background-color: #f3f4f6;
+              border-radius: 8px;
+              padding: 20px;
+              text-align: center;
+            }
+            .feature-icon {
+              font-size: 32px;
+              margin-bottom: 10px;
+            }
+            .footer {
+              text-align: center;
+              color: #6b7280;
+              font-size: 14px;
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 1px solid #e5e7eb;
+            }
+            @media (max-width: 600px) {
+              .container {
+                padding: 20px 15px;
+              }
+              .features {
+                grid-template-columns: 1fr;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">
+                <span>A</span>
+              </div>
+              <h1>Email Verified Successfully! 🎉</h1>
+              <p>Congratulations ${name}! Your email has been verified and your account is now fully activated.</p>
+            </div>
+            
+            <div class="success-container">
+              <div class="success-icon">✅</div>
+              <h2>You're all set!</h2>
+              <p>Your account now has a verified badge, giving you access to all features.</p>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard" class="cta-button">Go to Dashboard</a>
+            </div>
+            
+            <p>Here's what you can do with your verified account:</p>
+            <div class="features">
+              <div class="feature">
+                <div class="feature-icon">🔍</div>
+                <h3>AI Research</h3>
+                <p>Get instant answers to complex questions</p>
+              </div>
+              <div class="feature">
+                <div class="feature-icon">📄</div>
+                <h3>Document Analysis</h3>
+                <p>Upload and analyze documents</p>
+              </div>
+              <div class="feature">
+                <div class="feature-icon">💾</div>
+                <h3>Save Research</h3>
+                <p>Organize and save your findings</p>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <p>© 2024 Ask.io. All rights reserved.</p>
+              <p>📧 Questions? Email us at support@ask.io</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+  }),
 }; 

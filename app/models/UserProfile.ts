@@ -6,6 +6,7 @@ export interface IUserProfile extends Document {
   name: string;
   bio?: string;
   profilePicture?: string;
+  isVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -16,6 +17,7 @@ const UserProfileSchema: Schema = new Schema({
   name: { type: String, required: true },
   bio: { type: String },
   profilePicture: { type: String },
+  isVerified: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
